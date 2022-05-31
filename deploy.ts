@@ -1,23 +1,31 @@
-import { ethers } from "ethers"
-import * as fs from "fs-extra"
-import "dotenv/config"
+import { ethers } from "ethers";
+import * as fs from "fs-extra";
+import "dotenv/config";
 
 async function main() {
   // First, compile this!
   // And make sure to have your ganache network up!
-  let provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL)
-  let wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider)
-  const abi = fs.readFileSync("./SimpleStorage_sol_SimpleStorage.abi", "utf8")
+  let provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
+  // let wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+  const encrypt = fs.readFileSync("./.encryptedKey.json", "utf8");
+  const password: string = process.env.PRIVATE_KEY_PASSWORD
+    ? process.env.PRIVATE_KEY_PASSWORD
+    : "";
+  if (!password) return;
+  let wallet = ethers.Wallet.fromEncryptedJsonSync(encrypt, password);
+  console.log(wallet);
+  wallet = await wallet.connect(provider);
+  const abi = fs.readFileSync("./SimpleStorage_sol_SimpleStorage.abi", "utf8");
   const binary = fs.readFileSync(
     "./SimpleStorage_sol_SimpleStorage.bin",
     "utf8"
-  )
-  const contractFactory = new ethers.ContractFactory(abi, binary, wallet)
-  console.log("Deploying, please wait...")
-  const contract = await contractFactory.deploy()
+  );
+  const contractFactory = new ethers.ContractFactory(abi, binary, wallet);
+  console.log("Deploying, please wait...");
+  const contract = await contractFactory.deploy();
   // const contract = await contractFactory.deploy({ gasPrice: 100000000000 })
-  const deploymentReceipt = await contract.deployTransaction.wait()
-  console.log(`Contract deployed to ${contract.address}`)
+  const deploymentReceipt = await contract.deployTransaction.wait();
+  console.log(`Contract deployed to ${contract.address}`);
   // console.log("Here is the transaction:")
   // console.log(contract.deployTransaction)
   // console.log("Here is the receipt:")
@@ -36,18 +44,19 @@ async function main() {
   // let resp = await wallet.signTransaction(tx)
   // console.log(resp)
 
-  let currentFavoriteNumber = await contract.retrieve()
-  console.log(`Current Favorite Number: ${currentFavoriteNumber}`)
-  console.log("Updating favorite number...")
-  let transactionResponse = await contract.store(7)
-  let transactionReceipt = await transactionResponse.wait()
-  currentFavoriteNumber = await contract.retrieve()
-  console.log(`New Favorite Number: ${currentFavoriteNumber}`)
+  let currentFavoriteNumber = await contract.retrieve();
+  console.log(`Current Favorite Number: ${currentFavoriteNumber}`);
+  console.log("Updating favorite number...");
+  let transactionResponse = await contract.store(7);
+  let transactionReceipt = await transactionResponse.wait();
+  currentFavoriteNumber = await contract.retrieve();
+  console.log(currentFavoriteNumber);
+  console.log(`New Favorite Number: ${currentFavoriteNumber}`);
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error(error)
-    process.exit(1)
-  })
+    console.error(error);
+    process.exit(1);
+  });
